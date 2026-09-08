@@ -1,0 +1,366 @@
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SQUIRT CLICKER</title>
+    <style>
+        :root {
+            --skin-tone: #f5cba7;
+            --skin-shadow: #d4a373;
+            --accent: #ff6b6b;
+            --bg-dark: #1a1a1a;
+            --panel-bg: rgba(0, 0, 0, 0.7);
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-dark);
+            color: white;
+            overflow: hidden;
+            user-select: none;
+            display: flex;
+            height: 100vh;
+        }
+
+        /* Main Game Area */
+        #game-canvas {
+            flex: 1;
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: radial-gradient(circle, #333 0%, #1a1a1a 100%);
+            cursor: crosshair;
+            overflow: hidden;
+        }
+
+        /* The "Target" - Realistic CSS rendering */
+        #target-container {
+            position: relative;
+            width: 300px;
+            height: 400px;
+            transition: transform 0.05s;
+            filter: drop-shadow(0 20px 30px rgba(0,0,0,0.5));
+        }
+
+        .cheek {
+            position: absolute;
+            width: 140px;
+            height: 220px;
+            background: radial-gradient(circle at 30% 40%, var(--skin-tone) 0%, var(--skin-shadow) 100%);
+            border-radius: 70px 70px 60px 60px;
+            box-shadow: inset -10px -10px 20px rgba(0,0,0,0.2);
+        }
+
+        .left-cheek {
+            left: 10px;
+            transform: rotate(-5deg);
+        }
+
+        .right-cheek {
+            right: 10px;
+            transform: rotate(5deg);
+        }
+
+        #target-container:active {
+            transform: scale(0.96);
+        }
+
+        /* UI Overlay */
+        #ui-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+
+        .stats-panel {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            text-align: center;
+            pointer-events: auto;
+        }
+
+        .counter {
+            font-size: 3rem;
+            font-weight: bold;
+            text-shadow: 0 0 10px var(--accent);
+            margin: 0;
+        }
+
+        .sps {
+            font-size: 1.2rem;
+            opacity: 0.8;
+        }
+
+        /* Sidebar Shop */
+        #shop {
+            width: 350px;
+            background: var(--panel-bg);
+            backdrop-filter: blur(10px);
+            border-left: 2px solid var(--accent);
+            padding: 20px;
+            overflow-y: auto;
+            pointer-events: auto;
+        }
+
+        .shop-header {
+            font-size: 1.5rem;
+            text-align: center;
+            margin-bottom: 20px;
+            color: var(--accent);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .upgrade-item {
+            background: rgba(255,255,255,0.1);
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: 0.2s;
+            border: 1px solid transparent;
+        }
+
+        .upgrade-item:hover {
+            background: rgba(255,255,255,0.2);
+            border-color: var(--accent);
+        }
+
+        .upgrade-item.disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .upgrade-name {
+            display: block;
+            font-weight: bold;
+            font-size: 1.1rem;
+        }
+
+        .upgrade-cost {
+            font-size: 0.9rem;
+            color: #aaa;
+        }
+
+        /* Particles */
+        .particle {
+            position: absolute;
+            background: white;
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 10;
+            box-shadow: 0 0 5px rgba(255,255,255,0.8);
+        }
+
+        /* Progress Bar */
+        #progress-container {
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 300px;
+            height: 10px;
+            background: #333;
+            border-radius: 5px;
+            overflow: hidden;
+        }
+
+        #progress-bar {
+            width: 0%;
+            height: 100%;
+            background: var(--accent);
+            transition: width 0.1s;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="game-canvas">
+        <div id="target-container">
+            <div class="cheek left-cheek"></div>
+            <div class="cheek right-cheek"></div>
+        </div>
+
+        <div id="ui-layer">
+            <div class="stats-panel">
+                <div class="counter" id="count-display">0 Squirts</div>
+                <div class="sps" id="sps-display">per second: 0</div>
+            </div>
+            <div id="progress-container">
+                <div id="progress-bar"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="shop">
+        <div class="shop-header">The Pleasure Shop</div>
+        <div id="upgrades-list">
+            <!-- Upgrades injected by JS -->
+        </div>
+    </div>
+
+    <script>
+        // Game State
+        let state = {
+            squirts: 0,
+            sps: 0,
+            spc: 1, // Squirts per click
+            totalClicks: 0
+        };
+
+        const upgrades = [
+            { id: 'palm', name: 'Stronger Palm', cost: 15, power: 1, type: 'click', desc: '+1 per slap' },
+            { id: 'lube', name: 'Satin Lubricant', cost: 100, power: 1, type: 'auto', desc: '+1 squirt/sec' },
+            { id: 'slapper', name: 'Automatic Slapper', cost: 500, power: 5, type: 'auto', desc: '+5 squirts/sec' },
+            { id: 'technique', name: 'Expert Technique', cost: 2000, power: 10, type: 'click', desc: '+10 per slap' },
+            { id: 'factory', name: 'Slap Factory', cost: 10000, power: 50, type: 'auto', desc: '+50 squirts/sec' },
+        ];
+
+        const upgradeCounts = {};
+        upgrades.forEach(u => upgradeCounts[u.id] = 0);
+
+        // DOM Elements
+        const countDisplay = document.getElementById('count-display');
+        const spsDisplay = document.getElementById('sps-display');
+        const upgradesList = document.getElementById('upgrades-list');
+        const progressBar = document.getElementById('progress-bar');
+        const target = document.getElementById('target-container');
+        const canvas = document.getElementById('game-canvas');
+
+        // Initialization
+        function initShop() {
+            upgradesList.innerHTML = '';
+            upgrades.forEach(u => {
+                const item = document.createElement('div');
+                item.className = 'upgrade-item';
+                item.id = `upg-${u.id}`;
+                item.innerHTML = `
+                    <span class="upgrade-name">${u.name}</span>
+                    <span class="upgrade-cost">Cost: ${u.cost} Squirts</span>
+                    <div style="font-size: 0.8rem; color: #888">${u.desc}</div>
+                `;
+                item.onclick = () => buyUpgrade(u);
+                upgradesList.appendChild(item);
+            });
+        }
+
+        function buyUpgrade(upgrade) {
+            const currentCost = Math.floor(upgrade.cost * Math.pow(1.15, upgradeCounts[upgrade.id]));
+            if (state.squirts >= currentCost) {
+                state.squirts -= currentCost;
+                upgradeCounts[upgrade.id]++;
+                
+                if (upgrade.type === 'click') state.spc += upgrade.power;
+                if (upgrade.type === 'auto') state.sps += upgrade.power;
+                
+                updateUI();
+                updateShop();
+            }
+        }
+
+        function updateUI() {
+            countDisplay.innerText = `${Math.floor(state.squirts)} Squirts`;
+            spsDisplay.innerText = `per second: ${state.sps}`;
+            
+            // Progress bar based on nearest upgrade cost
+            const nextUpgrade = upgrades.find(u => {
+                const cost = Math.floor(u.cost * Math.pow(1.15, upgradeCounts[u.id]));
+                return state.squirts < cost;
+            });
+            if (nextUpgrade) {
+                const cost = Math.floor(nextUpgrade.cost * Math.pow(1.15, upgradeCounts[nextUpgrade.id]));
+                const progress = (state.squirts / cost) * 100;
+                progressBar.style.width = `${Math.min(progress, 100)}%`;
+            } else {
+                progressBar.style.width = '100%';
+            }
+        }
+
+        function updateShop() {
+            upgrades.forEach(u => {
+                const item = document.getElementById(`upg-${u.id}`);
+                const currentCost = Math.floor(u.cost * Math.pow(1.15, upgradeCounts[u.id]));
+                item.querySelector('.upgrade-cost').innerText = `Cost: ${currentCost} Squirts`;
+                
+                if (state.squirts < currentCost) {
+                    item.classList.add('disabled');
+                } else {
+                    item.classList.remove('disabled');
+                }
+            });
+        }
+
+        // Particle Effect Logic
+        function createSquirt(x, y) {
+            const particleCount = 5 + Math.floor(state.spc / 2);
+            for (let i = 0; i < particleCount; i++) {
+                const p = document.createElement('div');
+                p.className = 'particle';
+                
+                // Random size
+                const size = Math.random() * 6 + 2;
+                p.style.width = `${size}px`;
+                p.style.height = `${size}px`;
+                
+                // Start position
+                p.style.left = `${x}px`;
+                p.style.top = `${y}px`;
+                
+                // Random direction (shooting outward)
+                const angle = Math.random() * Math.PI * 2;
+                const velocity = Math.random() * 150 + 50;
+                const vx = Math.cos(angle) * velocity;
+                const vy = Math.sin(angle) * velocity;
+                
+                canvas.appendChild(p);
+
+                // Animate
+                const animation = p.animate([
+                    { transform: 'translate(0, 0) scale(1)', opacity: 1 },
+                    { transform: `translate(${vx}px, ${vy}px) scale(0)`, opacity: 0 }
+                ], {
+                    duration: 400 + Math.random() * 400,
+                    easing: 'cubic-bezier(0, .5, .5, 1)'
+                });
+
+                animation.onfinish = () => p.remove();
+            }
+        }
+
+        // Input Handling
+        target.addEventListener('mousedown', (e) => {
+            state.squirts += state.spc;
+            state.totalClicks++;
+            
+            // Get actual click position relative to screen
+            createSquirt(e.clientX, e.clientY);
+            
+            updateUI();
+            updateShop();
+        });
+
+        // Game Loop
+        setInterval(() => {
+            if (state.sps > 0) {
+                state.squirts += state.sps / 10;
+                updateUI();
+                updateShop();
+            }
+        }, 100);
+
+        // Start
+        initShop();
+        updateUI();
+        updateShop();
+    </script>
+</body>
