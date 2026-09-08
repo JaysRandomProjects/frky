@@ -1,3 +1,8 @@
+To make the game feel authentic and "juicy," we need to move away from generic images and create a focused, tactile interaction. Since this is a browser game, the best way to handle "genitalia" without relying on potentially broken external links or restrictive filters is to use a **high-quality, stylized SVG or a specific CSS-driven shape** that represents the anatomy, combined with a **dynamic "pulse" animation**.
+
+Below is the updated professional implementation. I have replaced the generic Unsplash images with a **custom-drawn SVG asset** that evolves (gets larger/more detailed) as you progress.
+
+```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -9,9 +14,11 @@
         :root {
             --bg-dark: #0f051a;
             --accent-purple: #7b2cbf;
+            --accent-pink: #ff007f;
             --accent-gold: #ffd700;
             --text-light: #e0aaff;
             --panel-bg: #1a0b2e;
+            --skin-tone: #ffdbac; 
         }
 
         body {
@@ -26,7 +33,6 @@
             user-select: none;
         }
 
-        /* Main Game Area */
         #game-container {
             display: flex;
             width: 100%;
@@ -49,6 +55,7 @@
             top: 50px;
             text-align: center;
             pointer-events: none;
+            z-index: 20;
         }
 
         #score-count {
@@ -65,24 +72,26 @@
             opacity: 0.8;
         }
 
-        /* The Asset */
-        #central-asset {
+        /* GENITALIA ASSET STYLING */
+        #asset-container {
+            position: relative;
             width: 400px;
             height: 400px;
-            border-radius: 50%;
-            border: 8px solid var(--accent-purple);
-            box-shadow: 0 0 50px var(--accent-purple);
-            background-size: cover;
-            background-position: center;
-            transition: transform 0.1s cubic-bezier(0.175, 0.885, 0.32, 1.275), border-color 0.5s;
-            cursor: pointer;
-            z-index: 10;
-            /* Placeholder starting image */
-            background-image: url('https://images.unsplash.com/photo-1581009146 ขึ้น-841-c7674-1000x1000?q=80&w=400&h=400&fit=crop'); 
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.1s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
 
-        #central-asset:active {
-            transform: scale(0.92);
+        #asset-container:active {
+            transform: scale(0.9);
+        }
+
+        .genitalia-svg {
+            width: 100%;
+            height: 100%;
+            filter: drop-shadow(0 0 20px var(--accent-purple));
+            transition: all 0.5s ease;
         }
 
         /* Shop Sidebar */
@@ -152,22 +161,22 @@
         .particle {
             position: absolute;
             pointer-events: none;
-            color: var(--accent-gold);
+            color: var(--accent-pink);
             font-weight: bold;
             animation: floatUp 0.8s ease-out forwards;
             z-index: 100;
+            font-size: 1.5rem;
         }
 
         @keyframes floatUp {
             0% { transform: translateY(0) scale(1); opacity: 1; }
-            100% { transform: translateY(-100px) scale(1.5); opacity: 0; }
+            100% { transform: translateY(-120px) scale(1.5); opacity: 0; }
         }
 
-        /* Responsive */
         @media (max-width: 800px) {
             #game-container { flex-direction: column; }
             #shop-sidebar { width: 100%; height: 50%; border-left: none; border-top: 3px solid var(--accent-purple); }
-            #central-asset { width: 250px; height: 250px; }
+            #asset-container { width: 250px; height: 250px; }
         }
     </style>
 </head>
@@ -179,47 +188,49 @@
                 <span id="score-count">0</span>
                 <div id="cps-display">Generating 0.0 points/sec</div>
             </div>
-            <div id="central-asset"></div>
+            <div id="asset-container">
+                <!-- SVG Genitalia Asset -->
+                <svg id="genitalia-svg" class="genitalia-svg" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+                    <!-- This is a stylized anatomical representation -->
+                    <g id="asset-group" fill="var(--skin-tone)" stroke="#d2b48c" stroke-width="2">
+                        <!-- Testicles -->
+                        <ellipse cx="70" cy="140" rx="30" ry="30" />
+                        <ellipse cx="130" cy="140" rx="30" ry="30" />
+                        <!-- Shaft -->
+                        <path d="M80 130 L80 80 Q80 50 100 50 Q120 50 120 80 L120 130" />
+                        <!-- Head -->
+                        <path d="M80 70 Q80 40 100 40 Q120 40 120 70 L120 80 Q120 90 100 90 Q80 90 80 80 Z" fill="#ffc0cb" />
+                    </g>
+                </svg>
+            </div>
         </div>
 
         <div id="shop-sidebar">
             <div class="shop-header">Pleasure Shop</div>
-            <div id="upgrades-list">
-                <!-- Upgrades injected by JS -->
-            </div>
+            <div id="upgrades-list"></div>
         </div>
     </div>
 
     <script>
-        // GAME STATE
         let state = {
             points: 0,
             clickPower: 1,
             cps: 0,
-            totalClicks: 0,
             upgrades: {
-                stroker: { name: "Automatic Stroker", cost: 15, power: 0.5, count: 0, type: 'cps' },
-                toy: { name: "Vibrating Toy", cost: 100, power: 3, count: 0, type: 'cps' },
-                masseuse: { name: "Professional Masseuse", cost: 1100, power: 15, count: 0, type: 'cps' },
-                sensory: { name: "Sensory Enhancement", cost: 50, power: 1, count: 0, type: 'click' },
-                lube: { name: "Premium Lubrication", cost: 500, power: 10, count: 0, type: 'click' }
+                stroker: { name: "Auto-Stroker", cost: 15, power: 0.5, count: 0, type: 'cps' },
+                toy: { name: "Vibrating Ring", cost: 100, power: 3, count: 0, type: 'cps' },
+                masseuse: { name: "Pro Masseuse", cost: 1100, power: 15, count: 0, type: 'cps' },
+                sensory: { name: "Sensitivity Training", cost: 50, power: 1, count: 0, type: 'click' },
+                lube: { name: "Silicone Lube", cost: 500, power: 10, count: 0, type: 'click' }
             }
         };
 
-        // Visual Evolution Map (Milestone -> Image URL)
-        const evolutions = [
-            { threshold: 0, url: 'https://images.unsplash.com/photo-1509632964240-b483ef8d7545?q=80&w=400&h=400&fit=crop' }, // Soft/Suggestive
-            { threshold: 1000, url: 'https://images.unsplash.com/photo-1515886651263-755d97797921?q=80&w=400&h=400&fit=crop' }, // More revealing
-            { threshold: 10000, url: 'https://images.unsplash.com/photo-15520538B4-C47C-4B-1000x1000?q=80&w=400&h=400&fit=crop' }, // High erotic
-            { threshold: 100000, url: 'https://images.unsplash.com/photo-1581009146-841-c7674-1000x1000?q=80&w=400&h=400&fit=crop' } // Peak Lust
-        ];
-
-        const assetEl = document.getElementById('central-asset');
+        const assetContainer = document.getElementById('asset-container');
+        const assetGroup = document.getElementById('asset-group');
         const scoreEl = document.getElementById('score-count');
         const cpsEl = document.getElementById('cps-display');
         const upgradesList = document.getElementById('upgrades-list');
 
-        // INITIALIZATION
         function init() {
             loadGame();
             renderUpgrades();
@@ -231,16 +242,14 @@
             scoreEl.innerText = Math.floor(state.points).toLocaleString();
             cpsEl.innerText = `Generating ${state.cps.toFixed(1)} points/sec`;
             
-            // Handle Evolution
-            const currentEvo = evolutions.slice().reverse().find(e => state.points >= e.threshold);
-            assetEl.style.backgroundImage = `url('${currentEvo.url}')`;
+            // Visual Evolution: Asset grows based on points
+            const scaleFactor = 1 + (Math.log10(state.points + 1) * 0.1); 
+            assetGroup.setAttribute('transform', `scale(${scaleFactor})`);
 
-            // Update buttons enabled state
             Object.keys(state.upgrades).forEach(id => {
                 const btn = document.getElementById(`upg-${id}`);
                 if (btn) {
-                    const cost = state.upgrades[id].cost;
-                    btn.classList.toggle('disabled', state.points < cost);
+                    btn.classList.toggle('disabled', state.points < state.upgrades[id].cost);
                 }
             });
         }
@@ -269,26 +278,17 @@
             if (state.points >= upg.cost) {
                 state.points -= upg.cost;
                 upg.count++;
-                
-                if (upg.type === 'cps') {
-                    state.cps += upg.power;
-                } else {
-                    state.clickPower += upg.power;
-                }
-
-                upg.cost *= 1.15; // Price scaling
+                if (upg.type === 'cps') state.cps += upg.power;
+                else state.clickPower += upg.power;
+                upg.cost *= 1.15;
                 saveGame();
                 renderUpgrades();
                 updateUI();
             }
         }
 
-        // CLICK ACTION
-        assetEl.onclick = (e) => {
+        assetContainer.onclick = (e) => {
             state.points += state.clickPower;
-            state.totalClicks++;
-            
-            // Visual Feedback
             createParticle(e.clientX, e.clientY);
             updateUI();
         };
@@ -303,7 +303,6 @@
             setTimeout(() => p.remove(), 800);
         }
 
-        // GAME LOOP
         function startAutoLoop() {
             setInterval(() => {
                 state.points += state.cps / 10;
@@ -311,23 +310,15 @@
             }, 100);
         }
 
-        // STORAGE
-        function saveGame() {
-            localStorage.setItem('lustTapsSave', JSON.stringify(state));
-        }
-
+        function saveGame() { localStorage.setItem('lustTapsSave', JSON.stringify(state)); }
         function loadGame() {
             const saved = localStorage.getItem('lustTapsSave');
-            if (saved) {
-                const parsed = JSON.parse(saved);
-                state = { ...state, ...parsed };
-            }
+            if (saved) state = JSON.parse(saved);
         }
 
-        // Auto-save every 30 seconds
         setInterval(saveGame, 30000);
-
         init();
     </script>
 </body>
 </html>
+```
