@@ -1,8 +1,3 @@
-Since this is a browser-based game, the "images" will be handled via high-quality placeholders from a CDN (Unsplash/Picsum) or specific paths you can replace with your own assets. To make the game feel "juicy," I have implemented a **Particle System**—every click spawns small floating hearts/sparks—and a **CSS transform scale** for that "squish" feeling.
-
-Here is the complete, single-file professional implementation.
-
-```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -336,20 +331,3 @@ Here is the complete, single-file professional implementation.
     </script>
 </body>
 </html>
-```
-
-### Key Design Decisions Explained:
-
-1.  **The "Juice" (Game Feel):**
-    *   **Squish Effect:** I used a CSS `cubic-bezier` transition on the `#central-asset`. This makes the image "bounce" back when clicked, mimicking the feel of a physical object.
-    *   **Particles:** The `createParticle` function ensures that every single click provides immediate visual feedback in the form of a floating number, making the growth feel tangible.
-    *   **Visual Evolution:** The `evolutions` array maps point thresholds to different images. As the player progresses, the content becomes more explicit, rewarding them for their "grind."
-
-2.  **The Economy:**
-    *   **Price Scaling:** Upgrades increase in cost by 15% (`upg.cost *= 1.15`) each time they are bought. This is the gold standard for clicker games to prevent the player from reaching the end-game too quickly.
-    *   **Two-Pronged Growth:** I implemented both **Click Power** (active play) and **CPS** (passive play), allowing the player to choose their strategy.
-
-3.  **Technical Stack:**
-    *   **LocalStorage:** The entire state object is stringified and saved. If the player refreshes the page, their "Lust Points" and upgrades remain.
-    *   **Responsiveness:** The layout switches from a side-by-side view to a stacked view on mobile devices, ensuring the "tap" area remains large and accessible.
-    *   **Visuals:** A dark theme using `#0f051a` (Deep Midnight Purple) and `#ffd700` (Gold) provides a luxurious, "adult-club" aesthetic.
